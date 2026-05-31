@@ -1,0 +1,93 @@
+1. Scraper --
+2. MongoDB --
+3. Dashboard --
+    Fix:
+            Get the forward to the urls
+            Get the specific news chnnel showing
+            Fix all categorites
+4. Embeddings --
+5. Vector search --
+6. RAG chatbot --
+7. Trend analytics
+
+
+
+
+# 1. Create a clean, isolated virtual environment
+python3 -m venv .venv
+
+# 2. Activate it
+source .venv/bin/activate
+
+# 3. Install only what your FastAPI app actually needs
+pip install fastapi uvicorn pymongo sentence-transformers scikit-learn numpy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''   
+        def parse(self, response):
+        current_category = response.meta.get("category", "Unknown")
+        articles = response.css("a[data-testid='internal-link']")
+        self.logger.warning(f"Found {len(articles)} articles")
+        current_source = response.meta.get("source", "Unknown")
+
+        seen_urls = set()
+        for article in articles:
+            title = article.css("h2[data-testid='card-headline']::text").get()
+            if not title:
+                continue  # skip anchors that don't contain a headline
+
+            raw_url = article.attrib.get("href")
+            url = response.urljoin(raw_url) if raw_url else None
+
+            if not url or url in seen_urls:
+                continue
+            seen_urls.add(url)
+
+
+            item = NewsScraperItem()
+            
+            # Extract link and make it absolute
+            raw_url = article.css("a::attr(href)").get()
+            if raw_url:
+                item["url"] = response.urljoin(raw_url)
+            else:
+                item["url"] = None
+            item["title"] = article.css("h2[data-testid='card-headline']::text").get()
+            item["description"] = article.css("p[data-testid='card-description']::text").get()
+            item["date"] = article.css("span[data-testid='card-metadata-lastupdated']::text").get()
+            item["category"] = current_category
+            item["source"] = current_source
+                # Only yield if we have a title and URL
+            if item["title"] and item["url"]:
+                    self.logger.warning(f"Yielding article: {item['title']} - {item['url']}")
+                    yield item
+            else:
+                self.logger.warning(f"Skipping article due to missing title or URL: {item}")
+        
+        # Pagination
+        next_page = response.css("a[data-testid='pagination-next-button']::attr(href)").get()
+        if next_page:
+            yield response.follow(next_page, callback=self.parse)
+'''
+
+
+'''
+    crontab -e
+    # Add this line:
+    0 */6 * * * cd /Users/nathandesousa/Desktop/Projects/Scraping/NEWS && .venv/bin/python news_scraper/scraper.py && .venv/bin/python Embeddings/embeddings.py >> /Users/nathandesousa/Desktop/Projects/Scraping/NEWS/cron.log 2>&1
+
+    Allows the web to be scraped every 6 hours, ensuring that the database is regularly updated with the latest news articles and embedded.
+'''

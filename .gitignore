@@ -1,0 +1,102 @@
+# ── Environment & Secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+*.env
+
+# Explicit secret files
+gemini_api_key.txt
+api_key.txt
+secrets.txt
+credentials.json
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ── Scrapy ────────────────────────────────────────────────────────────────────
+scrapy.log
+*.log
+cron.log
+debug_html/
+httpcache/
+.scrapy/
+
+# ── Node.js / Next.js ─────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+news-dashboard/.next/
+news-dashboard/out/
+
+# ── MongoDB ───────────────────────────────────────────────────────────────────
+# Local MongoDB data directory (if stored in project)
+data/
+mongodb-data/
+
+# ── IDE / Editor ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Competitive programming helper (CPH)
+.cph/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.bak
+*.tmp
+*.temp
