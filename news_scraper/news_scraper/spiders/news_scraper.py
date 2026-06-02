@@ -212,25 +212,43 @@ class NewsScraperSpider(scrapy.Spider):
     # =========================================================
 
     def parse_bbc(self, response):
-        print("Parsing BBC Content Feeds...")
+        print("[BBC] Parsing BBC Content Feeds...")
         self.logger.info("Parsing BBC Content Feeds...")
         
-        articles = response.css("a[data-testid='internal-link'], a[class*='PromoLink'], a[class*='CardLink']")
-        if not articles:
-            articles = response.css("div[data-testid='news-aria-label-card'] a, div[class*='gs-c-promo'] a")
+        articles = response.css(
+            "a[data-testid='internal-link'], "
+            "a[class*='PromoLink'], "
+            "a[class*='CardLink'], "
+            "div[data-testid='news-aria-label-card'] a, "
+            "div[class*='gs-c-promo'] a, "
+            "div[class*='card'] a"
+        )
 
         seen_urls = set()
 
         for article in articles:
-            title = article.css("h2[data-testid='card-headline']::text, span[data-testid='card-headline']::text, h3::text").get()
+            title = article.css(
+                "h2[data-testid='card-headline']::text, "
+                "span[data-testid='card-headline']::text, "
+                "h3::text"
+            ).get()
             if not title:
                 title = self.clean_text(article.css("h2 *::text, h3 *::text").getall())
+            
+            if not title or len(title) < 5:
+                continue
                 
             url = article.attrib.get("href")
-            description = article.css("p[data-testid='card-description']::text, p::text").get()
-            date = article.css("span[data-testid='card-metadata-lastupdated']::text, span[class*='metadata']::text").get()
+            description = article.css(
+                "p[data-testid='card-description']::text, "
+                "p::text"
+            ).get()
+            date = article.css(
+                "span[data-testid='card-metadata-lastupdated']::text, "
+                "span[class*='metadata']::text"
+            ).get()
 
-            if not title or not url:
+            if not url:
                 continue
 
             full_url = response.urljoin(url)
@@ -248,13 +266,28 @@ class NewsScraperSpider(scrapy.Spider):
             )
 
     def parse_cnn(self, response):
+        print("[CNN] Parsing CNN Content Feeds...")
+        self.logger.info("Parsing CNN Content Feeds...")
         seen = set()
-        articles = response.css("a.container__link")
+        
+        articles = response.css(
+            "a.container__link, "
+            "span[data-testid='headline'] a, "
+            "a[data-analytics-area='card-headline'], "
+            "div[class*='container__headline'] a, "
+            "article a, "
+            "div[class*='card'] a"
+        )
+        
         for article in articles:
             title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            
             url = article.attrib.get("href")
             if not title or not url:
                 continue
+                
             full_url = response.urljoin(url)
             if not self.is_valid_url(full_url) or full_url in seen:
                 continue
@@ -262,13 +295,21 @@ class NewsScraperSpider(scrapy.Spider):
             yield self.build_item(response, title, full_url)
 
     def parse_reuters(self, response):
-        print("Parsing Reuters Content Feeds...")
+        print("[Reuters] Parsing Reuters Content Feeds...")
+        self.logger.info("Parsing Reuters Content Feeds...")
         seen = set()
-        articles = response.css("a[data-testid='Heading']")
+        articles = response.css(
+            "a[data-testid='Heading'], "
+            "a[class*='heading'], "
+            "article a, "
+            "div[class*='article-item'] a"
+        )
         for article in articles:
             title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
             url = article.attrib.get("href")
-            if not title or not url:
+            if not url:
                 continue
             full_url = response.urljoin(url)
             if not self.is_valid_url(full_url) or full_url in seen:
@@ -277,14 +318,22 @@ class NewsScraperSpider(scrapy.Spider):
             yield self.build_item(response, title, full_url)
 
     def parse_ap(self, response):
-        print("Parsing AP News Content Feeds...")
+        print("[AP News] Parsing AP News Content Feeds...")
+        self.logger.info("Parsing AP News Content Feeds...")
         seen = set()
-        articles = response.css("div.PagePromo, article")
+        articles = response.css(
+            "div.PagePromo, "
+            "article, "
+            "div[class*='article'] a, "
+            "a[class*='card']"
+        )
         for article in articles:
             title = self.clean_text(article.css("h1 *::text, h2 *::text, h3 *::text").getall())
+            if not title or len(title) < 5:
+                continue
             description = self.clean_text(article.css("p *::text").getall())
             url = article.css("a::attr(href)").get()
-            if not title or not url:
+            if not url:
                 continue
             full_url = response.urljoin(url)
             if not self.is_valid_url(full_url) or full_url in seen:
@@ -293,41 +342,63 @@ class NewsScraperSpider(scrapy.Spider):
             yield self.build_item(response, title, full_url, description)
 
     def parse_guardian(self, response):
-        print("Parsing Guardian Content Feeds...")
+        print("[The Guardian] Parsing Guardian Content Feeds...")
+        self.logger.info("Parsing Guardian Content Feeds...")
         seen = set()
-        articles = response.css("a[data-link-name='article']")
+        articles = response.css(
+            "a[data-link-name='article'], "
+            "a[data-testid='internal-link'], "
+            "a[class*='card'], "
+            "article a"
+        )
         for article in articles:
             title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
             url = article.attrib.get("href")
             if not title or not url or not url.startswith("http"):
                 continue
             if not self.is_valid_url(url) or url in seen:
                 continue
-            print(seen)
             seen.add(url)
             yield self.build_item(response, title, url)
 
     def parse_techcrunch(self, response):
-        print("Parsing TechCrunch Content Feeds...")
+        print("[TechCrunch] Parsing TechCrunch Content Feeds...")
+        self.logger.info("Parsing TechCrunch Content Feeds...")
         seen = set()
-        articles = response.css("article")
+        articles = response.css(
+            "article, "
+            "a[class*='post'], "
+            "div[class*='post'] a"
+        )
         for article in articles:
             title = self.clean_text(article.css("h2 *::text, h3 *::text").getall())
+            if not title or len(title) < 5:
+                continue
             description = self.clean_text(article.css("p *::text").getall())
             url = article.css("a::attr(href)").get()
-            if not title or not url or url in seen:
+            if not url or url in seen:
                 continue
             seen.add(url)
             yield self.build_item(response, title, url, description)
 
     def parse_espn(self, response):
-        print("Parsing ESPN Content Feeds...")
+        print("[ESPN] Parsing ESPN Content Feeds...")
+        self.logger.info("Parsing ESPN Content Feeds...")
         seen = set()
-        articles = response.css("section.contentItem")
+        articles = response.css(
+            "section.contentItem, "
+            "article, "
+            "div[class*='Article'], "
+            "div[class*='card'] a"
+        )
         for article in articles:
             title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
             url = article.css("a::attr(href)").get()
-            if not title or not url:
+            if not url:
                 continue
             full_url = response.urljoin(url)
             if not self.is_valid_url(full_url) or full_url in seen:
@@ -336,13 +407,21 @@ class NewsScraperSpider(scrapy.Spider):
             yield self.build_item(response, title, full_url)
 
     def parse_cnbc(self, response):
-        print("Parsing CNBC Content Feeds...")
+        print("[CNBC] Parsing CNBC Content Feeds...")
+        self.logger.info("Parsing CNBC Content Feeds...")
         seen = set()
-        articles = response.css("div.Card")
+        articles = response.css(
+            "div.Card, "
+            "article, "
+            "div[class*='card'], "
+            "div[class*='ArticleCard']"
+        )
         for article in articles:
             title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
             url = article.css("a::attr(href)").get()
-            if not title or not url:
+            if not url:
                 continue
             full_url = response.urljoin(url)
             if not self.is_valid_url(full_url) or full_url in seen:
@@ -351,13 +430,16 @@ class NewsScraperSpider(scrapy.Spider):
             yield self.build_item(response, title, full_url)
 
     def parse_bloomberg(self, response):
-        print("Parsing Bloomberg Content Feeds...")
+        print("[Bloomberg] Parsing Bloomberg Content Feeds...")
+        self.logger.info("Parsing Bloomberg Content Feeds...")
         seen = set()
         articles = response.css("article, div.story-list-story")
         for article in articles:
             title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
             url = article.css("a::attr(href)").get()
-            if not title or not url:
+            if not url:
                 continue
             full_url = response.urljoin(url)
             if not self.is_valid_url(full_url) or full_url in seen:
@@ -365,11 +447,186 @@ class NewsScraperSpider(scrapy.Spider):
             seen.add(full_url)
             yield self.build_item(response, title, full_url)
 
-    def parse_aljazeera(self, response): yield from []
-    def parse_sky(self, response): yield from []
-    def parse_nytimes(self, response): yield from []
-    def parse_arstechnica(self, response): yield from []
-    def parse_sciencedaily(self, response): yield from []
-    def parse_variety(self, response): yield from []
-    def parse_fox(self, response): yield from []
-    def parse_wapo(self, response): yield from []
+    def parse_aljazeera(self, response):
+        print("[Al Jazeera] Parsing Al Jazeera Content Feeds...")
+        self.logger.info("Parsing Al Jazeera Content Feeds...")
+        seen = set()
+        articles = response.css(
+            "article a, "
+            "a[class*='article-link'], "
+            "div[class*='article'] a, "
+            "a[data-testid='internal-link']"
+        )
+        for article in articles:
+            title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            url = article.attrib.get("href")
+            if not url:
+                continue
+            full_url = response.urljoin(url)
+            if not self.is_valid_url(full_url) or full_url in seen:
+                continue
+            seen.add(full_url)
+            yield self.build_item(response, title, full_url)
+
+    def parse_sky(self, response):
+        print("[Sky News] Parsing Sky News Content Feeds...")
+        self.logger.info("Parsing Sky News Content Feeds...")
+        seen = set()
+        articles = response.css(
+            "a[class*='story'], "
+            "article a, "
+            "div[class*='item'] a, "
+            "h2 a"
+        )
+        for article in articles:
+            title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            url = article.attrib.get("href")
+            if not url:
+                continue
+            full_url = response.urljoin(url)
+            if not self.is_valid_url(full_url) or full_url in seen:
+                continue
+            seen.add(full_url)
+            yield self.build_item(response, title, full_url)
+
+    def parse_nytimes(self, response):
+        print("[NY Times] Parsing NY Times Content Feeds...")
+        self.logger.info("Parsing NY Times Content Feeds...")
+        seen = set()
+        articles = response.css(
+            "a[data-testid='Link'], "
+            "a[class*='link'], "
+            "article a, "
+            "div[class*='story-link'] a"
+        )
+        for article in articles:
+            title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            url = article.attrib.get("href")
+            if not url or not url.startswith("/"):
+                continue
+            full_url = response.urljoin(url)
+            if not self.is_valid_url(full_url) or full_url in seen:
+                continue
+            seen.add(full_url)
+            yield self.build_item(response, title, full_url)
+
+    def parse_arstechnica(self, response):
+        print("[Ars Technica] Parsing Ars Technica Content Feeds...")
+        self.logger.info("Parsing Ars Technica Content Feeds...")
+        seen = set()
+        articles = response.css(
+            "article a, "
+            "a[class*='post'], "
+            "div[class*='article'] a, "
+            "h2 a"
+        )
+        for article in articles:
+            title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            url = article.attrib.get("href")
+            if not url:
+                continue
+            full_url = response.urljoin(url)
+            if not self.is_valid_url(full_url) or full_url in seen:
+                continue
+            seen.add(full_url)
+            yield self.build_item(response, title, full_url)
+
+    def parse_sciencedaily(self, response):
+        print("[Science Daily] Parsing Science Daily Content Feeds...")
+        self.logger.info("Parsing Science Daily Content Feeds...")
+        seen = set()
+        articles = response.css(
+            "div[class*='story'] a, "
+            "article a, "
+            "a[class*='top-story'], "
+            "div.top-story a"
+        )
+        for article in articles:
+            title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            url = article.attrib.get("href")
+            if not url:
+                continue
+            full_url = response.urljoin(url)
+            if not self.is_valid_url(full_url) or full_url in seen:
+                continue
+            seen.add(full_url)
+            yield self.build_item(response, title, full_url)
+
+    def parse_variety(self, response):
+        print("[Variety] Parsing Variety Content Feeds...")
+        self.logger.info("Parsing Variety Content Feeds...")
+        seen = set()
+        articles = response.css(
+            "article a, "
+            "a[class*='card'], "
+            "div[class*='article'] a, "
+            "h2 a"
+        )
+        for article in articles:
+            title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            url = article.attrib.get("href")
+            if not url:
+                continue
+            full_url = response.urljoin(url)
+            if not self.is_valid_url(full_url) or full_url in seen:
+                continue
+            seen.add(full_url)
+            yield self.build_item(response, title, full_url)
+
+    def parse_fox(self, response):
+        print("[Fox News] Parsing Fox News Content Feeds...")
+        self.logger.info("Parsing Fox News Content Feeds...")
+        seen = set()
+        articles = response.css(
+            "article a, "
+            "a[class*='story'], "
+            "div[class*='article'] a, "
+            "h2 a"
+        )
+        for article in articles:
+            title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            url = article.attrib.get("href")
+            if not url:
+                continue
+            full_url = response.urljoin(url)
+            if not self.is_valid_url(full_url) or full_url in seen:
+                continue
+            seen.add(full_url)
+            yield self.build_item(response, title, full_url)
+
+    def parse_wapo(self, response):
+        print("[Washington Post] Parsing Washington Post Content Feeds...")
+        self.logger.info("Parsing Washington Post Content Feeds...")
+        seen = set()
+        articles = response.css(
+            "article a, "
+            "a[class*='card'], "
+            "div[class*='article'] a, "
+            "h2 a"
+        )
+        for article in articles:
+            title = self.clean_text(article.css("*::text").getall())
+            if not title or len(title) < 5:
+                continue
+            url = article.attrib.get("href")
+            if not url:
+                continue
+            full_url = response.urljoin(url)
+            if not self.is_valid_url(full_url) or full_url in seen:
+                continue
+            seen.add(full_url)
+            yield self.build_item(response, title, full_url)

@@ -8,9 +8,6 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
-
-
-
 from contextlib import asynccontextmanager
 from typing import List, Optional
 from datetime import datetime
@@ -25,8 +22,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from bson import ObjectId
 
 from google import genai
-
-import os
 
 gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -89,29 +84,30 @@ def get_news(request: Request, category: Optional[str] = None, limit_per_source:
 # ── /search ───────────────────────────────────────────────────────────────────
 @app.get("/search")
 def semantic_search(request: Request, q: str, limit: int = 10):
-    db_collection = request.app.state.db["news"]  # Added .state
-    query_vec = np.array(request.app.state.model.encode(q)).reshape(1, -1) # Added .state
-    db_collection = request.app.state.db["news"]
-    query_vec = np.array(request.app.state.model.encode(q)).reshape(1, -1)
-    
-    articles = list(db_collection.find(
-        {"embedding": {"$exists": True}},
-        {"title": 1, "url": 1, "description": 1, "source": 1, "category": 1, "date": 1, "embedding": 1}
-    ))
-    if not articles:
-        return []
+    try:
+        db_collection = request.app.state.db["news"]
+        query_vec = np.array(request.app.state.model.encode(q)).reshape(1, -1)
         
-    embeddings = np.array([a["embedding"] for a in articles])
-    scores = cosine_similarity(query_vec, embeddings)[0]
-    ranked = sorted(zip(scores, articles), key=lambda x: x[0], reverse=True)[:limit]
-    
-    results = []
-    for score, article in ranked:
-        article["_id"] = str(article["_id"])
-        article["score"] = round(float(score), 4)
-        article.pop("embedding", None)
-        results.append(article)
-    return results
+        articles = list(db_collection.find(
+            {"embedding": {"$exists": True}},
+            {"title": 1, "url": 1, "description": 1, "source": 1, "category": 1, "date": 1, "embedding": 1}
+        ))
+        if not articles:
+            return []
+            
+        embeddings = np.array([a["embedding"] for a in articles])
+        scores = cosine_similarity(query_vec, embeddings)[0]
+        ranked = sorted(zip(scores, articles), key=lambda x: x[0], reverse=True)[:limit]
+        
+        results = []
+        for score, article in ranked:
+            article["_id"] = str(article["_id"])
+            article["score"] = round(float(score), 4)
+            article.pop("embedding", None)
+            results.append(article)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
 
 # ── /clusters ─────────────────────────────────────────────────────────────────
 @app.get("/clusters")
