@@ -153,51 +153,6 @@ source ~/.zshrc
 
 ---
 
-## Running the Pipeline
-
-### Option A — All at once (recommended)
-
-```bash
-python3 Plan/RUN.py
-```
-
-This starts the FastAPI server and Next.js dev server together. Stop with `Ctrl+C`.
-
-### Option B — Step by step
-
-**Step 1: Start MongoDB**
-```bash
-mongod --dbpath /usr/local/var/mongodb   # macOS Homebrew
-# or: brew services start mongodb-community
-```
-
-**Step 2: Scrape articles**
-```bash
-cd news_scraper
-scrapy crawl news_scraper
-```
-
-**Step 3: Generate embeddings**
-```bash
-cd Embeddings
-python3 embeddings.py
-```
-
-**Step 4: Start FastAPI**
-```bash
-cd MongoDB
-python3 app.py
-# API available at http://localhost:8000
-```
-
-**Step 5: Start the dashboard**
-```bash
-cd news-dashboard
-npm run dev
-# Dashboard available at http://localhost:3000
-```
-
----
 
 ## Automated Scraping (Cron)
 
@@ -346,31 +301,6 @@ Article publication volume bucketed by hour.
 
 ---
 
-## Troubleshooting
-
-**`GEMINI_API_KEY` not set**
-```
-KeyError: 'GEMINI_API_KEY'
-```
-Export the variable in the same shell session where you run `app.py`. See setup step 5.
-
-**Gemini 429 quota exceeded**
-You have hit the free tier daily limit. Either wait until midnight Pacific, enable billing on Google AI Studio, or switch the model string in `app.py` to `gemini-2.5-flash` or another available model.
-
-**Trends endpoints return 404**
-The FastAPI process running is using an old version of `app.py`. Check which file is running with `ps aux | grep app.py`, replace it with the updated file, and restart.
-
-**Not enough articles for clustering**
-Embeddings haven't been generated yet. Run `python3 Embeddings/embeddings.py` after scraping.
-
-**Playwright browser not found**
-```bash
-playwright install chromium
-```
-
----
-
-
 
 
 
@@ -395,18 +325,3 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
