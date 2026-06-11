@@ -18,13 +18,3 @@ if __name__ == "__main__":
     compute_embeddings("news_db")
 
 
-'''
-    # Semantic search
-    GET /search?q=artificial intelligence regulations&limit=10
-
-    # Cluster all articles into 8 topic groups
-    GET /clusters?n_clusters=8
-
-    # Get recommendations for a specific article
-    GET /recommend/abc123def456?limit=5
-'''
