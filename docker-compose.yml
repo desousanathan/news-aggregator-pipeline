@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    volumes:
+      - ./:/app
+    command: python scraper.py
+
+  rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    command: python app.py
+    restart: unless-stopped
+    depends_on:
+      - mongo
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+    command: ["npm", "start"]
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: newsdb
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+    driver: local

@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+.git
+.gitignore
+.DS_Store
+node_modules/
+# If you build artifacts or logs in the repo, add them here
