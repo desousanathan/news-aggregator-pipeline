@@ -135,78 +135,7 @@ def cluster_articles(request: Request, n_clusters: int = 8):
     return sorted(clusters.values(), key=len, reverse=True)
 
 # ── /recommend ────────────────────────────────────────────────────────────────
-@app.get("/recommend/{article_id}")
-def recommend(request: Request, article_id: str, limit: int = 5):
-    db_collection = request.app.state.db["news"]
-    
-    # Safe BSON processing to prevent application crash on malformed ObjectIds
-    try:
-        query_id = ObjectId(article_id) if ObjectId.is_valid(article_id) else article_id
-    except Exception:
-        query_id = article_id
 
-    source = db_collection.find_one({"_id": query_id})
-    if not source or "embedding" not in source:
-        raise HTTPException(status_code=404, detail="Article not found or not yet embedded")
-        
-    source_vec = np.array(source["embedding"]).reshape(1, -1)
-    others = list(db_collection.find(
-        {"embedding": {"$exists": True}, "_id": {"$ne": source["_id"]}},
-        {"title": 1, "url": 1, "description": 1, "source": 1, "category": 1, "date": 1, "embedding": 1}
-    ))
-    if not others:
-        return []
-        
-    embeddings = np.array([a["embedding"] for a in others])
-    scores = cosine_similarity(source_vec, embeddings)[0]
-    ranked = sorted(zip(scores, others), key=lambda x: x[0], reverse=True)[:limit]
-    
-    results = []
-    for score, article in ranked:
-        article["_id"] = str(article["_id"])
-        article["score"] = round(float(score), 4)
-        article.pop("embedding", None)
-        results.append(article)
-    return results
-
-
-@app.get("/chat")
-def chat(request: Request, q: str, limit: int = 5):
-    query_vec = np.array(request.app.state.model.encode(q)).reshape(1, -1)
-    db_collection = request.app.state.db["news"]
-    articles = list(db_collection.find(
-        {"embedding": {"$exists": True}},
-        {"title": 1, "description": 1, "url": 1, "source": 1, "embedding": 1}
-    ))
-
-    if not articles:
-        return {"answer": "No articles found in the database.", "sources": []}
-
-    embeddings = np.array([a["embedding"] for a in articles])
-    if embeddings.ndim == 1:
-        embeddings = embeddings.reshape(1, -1)
-
-    scores = cosine_similarity(query_vec, embeddings)[0]
-    top = sorted(zip(scores, articles), key=lambda x: x[0], reverse=True)[:limit]
-
-    context = "\n\n".join([
-        f"- {a['title']} ({a['source']}): {a.get('description', '')}"
-        for _, a in top
-    ])
-
-    try:
-        response = gemini_client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=f"You are a news assistant. Answer using only the provided articles.\n\nArticles:\n{context}\n\nQuestion: {q}"
-        )
-        answer = response.text
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini error: {str(e)}")
-
-    return {
-        "answer": answer,
-        "sources": [{"title": a["title"], "url": a["url"]} for _, a in top]
-    }
 
 
 
