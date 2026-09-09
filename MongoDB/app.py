@@ -228,52 +228,7 @@ def get_trends(request: Request, hours: int = 24):
     ]
     results = list(db.aggregate(pipeline))
     return [{"category": r["_id"], "count": r["count"], "sources": r["sources"]} for r in results]
- 
-# ── /trends/keywords ──────────────────────────────────────────────────────────
-@app.get("/trends/keywords")
-def trending_keywords(request: Request, hours: int = 24, top_n: int = 20):
-    from collections import Counter
-    from datetime import timezone, timedelta
-    import re
- 
-    STOPWORDS = {
-        "the","a","an","in","of","to","and","for","is","on","at","by","with",
-        "that","this","from","are","was","were","has","have","been","will",
-        "its","it","as","be","but","or","not","over","after","amid","than",
-        "more","new","says","said","after","into","about","their","they",
-        "what","who","how","when","where","which","your","our","his","her",
-    }
- 
-    db = request.app.state.db["news"]
-    since = datetime.now(timezone.utc) - timedelta(hours=hours)
-    articles = list(db.find({"scraped_at": {"$gte": since}}, {"title": 1}))
- 
-    words = []
-    for a in articles:
-        tokens = re.findall(r'\b[a-zA-Z]{4,}\b', a.get("title", "").lower())
-        words.extend([w for w in tokens if w not in STOPWORDS])
- 
-    counts = Counter(words).most_common(top_n)
-    return [{"word": w, "count": c} for w, c in counts]
- 
-# ── /trends/volume ────────────────────────────────────────────────────────────
-@app.get("/trends/volume")
-def volume_over_time(request: Request, hours: int = 24, bucket_hours: int = 1):
-    from datetime import timezone, timedelta
-    db = request.app.state.db["news"]
-    since = datetime.now(timezone.utc) - timedelta(hours=hours)
-    pipeline = [
-        {"$match": {"scraped_at": {"$gte": since}}},
-        {"$group": {
-            "_id": {
-                "$dateTrunc": {"date": "$scraped_at", "unit": "hour", "binSize": bucket_hours}
-            },
-            "count": {"$sum": 1}
-        }},
-        {"$sort": {"_id": 1}}
-    ]
-    results = list(db.aggregate(pipeline))
-    return [{"time": r["_id"].isoformat(), "count": r["count"]} for r in results]
+
 
 if __name__ == "__main__":
     # Pass 'app' directly as an object, not as a string "app:app"
