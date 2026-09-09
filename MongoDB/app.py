@@ -212,22 +212,7 @@ def chat(request: Request, q: str, limit: int = 5):
 
 
 # ── /trends ───────────────────────────────────────────────────────────────────
-@app.get("/trends")
-def get_trends(request: Request, hours: int = 24):
-    from datetime import timezone, timedelta
-    db = request.app.state.db["news"]
-    since = datetime.now(timezone.utc) - timedelta(hours=hours)
-    pipeline = [
-        {"$match": {"scraped_at": {"$gte": since}}},
-        {"$group": {
-            "_id": "$category",
-            "count": {"$sum": 1},
-            "sources": {"$addToSet": "$source"}
-        }},
-        {"$sort": {"count": -1}}
-    ]
-    results = list(db.aggregate(pipeline))
-    return [{"category": r["_id"], "count": r["count"], "sources": r["sources"]} for r in results]
+
 
 
 if __name__ == "__main__":
