@@ -143,6 +143,45 @@ def cluster_articles(request: Request, n_clusters: int = 8):
 # ── /trends ───────────────────────────────────────────────────────────────────
 
 
+# ── /chat ───────────────────────────────────────────────────────────────────
+@app.get("/chat")
+def chat(request: Request, q: str, limit: int = 5):
+    query_vec = np.array(request.app.state.model.encode(q)).reshape(1, -1)
+    db_collection = request.app.state.db["news"]
+    articles = list(db_collection.find(
+        {"embedding": {"$exists": True}},
+        {"title": 1, "description": 1, "url": 1, "source": 1, "embedding": 1}
+    ))
+
+    if not articles:
+        return {"answer": "No articles found in the database.", "sources": []}
+
+    embeddings = np.array([a["embedding"] for a in articles])
+    if embeddings.ndim == 1:
+        embeddings = embeddings.reshape(1, -1)
+
+    scores = cosine_similarity(query_vec, embeddings)[0]
+    top = sorted(zip(scores, articles), key=lambda x: x[0], reverse=True)[:limit]
+
+    context = "\n\n".join([
+        f"- {a['title']} ({a['source']}): {a.get('description', '')}"
+        for _, a in top
+    ])
+
+    try:
+        response = gemini_client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=f"You are a news assistant. Answer using only the provided articles.\n\nArticles:\n{context}\n\nQuestion: {q}"
+        )
+        answer = response.text
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gemini error: {str(e)}")
+
+    return {
+        "answer": answer,
+        "sources": [{"title": a["title"], "url": a["url"]} for _, a in top]
+    }
+
 
 if __name__ == "__main__":
     # Pass 'app' directly as an object, not as a string "app:app"
