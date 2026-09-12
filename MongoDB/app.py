@@ -1,5 +1,6 @@
 import os
 import threading
+import json
 
 # Set these BEFORE importing any ML libraries
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -22,6 +23,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from bson import ObjectId
 
 from google import genai
+from google.genai import types
 
 gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -163,15 +165,31 @@ def chat(request: Request, q: str, limit: int = 5):
     scores = cosine_similarity(query_vec, embeddings)[0]
     top = sorted(zip(scores, articles), key=lambda x: x[0], reverse=True)[:limit]
 
-    context = "\n\n".join([
-        f"- {a['title']} ({a['source']}): {a.get('description', '')}"
+    context = [
+        {
+            "title": a.get("title", ""),
+            "source": a.get("source", ""),
+            "description": a.get("description", ""),
+            "url": a.get("url", ""),
+        }
         for _, a in top
-    ])
+    ]
 
     try:
         response = gemini_client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=f"You are a news assistant. Answer using only the provided articles.\n\nArticles:\n{context}\n\nQuestion: {q}"
+            model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=(
+                    "You are a news assistant. Answer using only the articles "
+                    "provided in the user message. If the articles do not contain "
+                    "the answer, say that the information is not available."
+                )
+            ),
+            contents=(
+                "Use these articles as your only source:\n"
+                f"{json.dumps(context, ensure_ascii=False, indent=2)}\n\n"
+                f"Question: {q}"
+            ),
         )
         answer = response.text
     except Exception as e:
